@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LinkOpenInApp — Instant YouTube Opener</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #050505;
+        --bg: oklch(0.02 0 0);
+        --surface: #0d0d0d;
+        --surface: oklch(0.05 0 0);
+        --accent: #262626;
+        --accent: oklch(0.15 0 0);
+        --fg: #f2f2f2;
+        --fg: oklch(0.95 0 0);
+        --fg-70: rgba(242, 242, 242, 0.7);
+        --fg-50: rgba(242, 242, 242, 0.5);
+        --fg-30: rgba(242, 242, 242, 0.3);
+        --border: rgba(255, 255, 255, 0.09);
+        --border-strong: rgba(255, 255, 255, 0.18);
+        --success: #7fffb0;
+        --error: #ff6b6b;
+        --radius: 10px;
+        --sans: "Inter", -apple-system, "Segoe UI", sans-serif;
+        --mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border-strong);
+        border-radius: 10px;
+      }
+      html {
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-strong) transparent;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        padding: 0 0 100px;
+        position: relative;
+      }
+
+      /* ── Loading screen ─────────────────────────────── */
+      #loader {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background: var(--bg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        transition:
+          opacity 0.5s ease,
+          visibility 0.5s ease;
+      }
+
+      #loader.done {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .loader-mark {
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--fg-50);
+      }
+
+      .loader-track {
+        width: 160px;
+        height: 2px;
+        background: var(--accent);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .loader-fill {
+        height: 100%;
+        width: 0%;
+        background: var(--fg);
+        border-radius: 999px;
+        transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      /* ── Reveal animation ───────────────────────────── */
+      .reveal {
+        opacity: 0;
+        transform: translateY(14px);
+        animation: revealUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes revealUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .page {
+        width: 100%;
+        max-width: 560px;
+        padding: 64px 20px 0;
+        position: relative;
+      }
+
+      /* ── Wordmark ───────────────────────────────────── */
+      .wordmark {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--fg-50);
+        margin-bottom: 40px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .wordmark .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--fg);
+      }
+
+      /* ── Hero copy ──────────────────────────────────── */
+      .hero {
+        position: relative;
+        text-align: center;
+        margin-bottom: 44px;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        top: -60px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 480px;
+        height: 320px;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(255, 255, 255, 0.06) 0%,
+          transparent 70%
+        );
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .eyebrow {
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--fg-50);
+        margin-bottom: 18px;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+      }
+
+      h1 {
+        font-family: var(--sans);
+        font-size: clamp(36px, 8vw, 54px);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.06;
+        color: var(--fg);
+        margin-bottom: 16px;
+      }
+
+      .hero-sub {
+        font-size: 16px;
+        font-weight: 400;
+        color: var(--fg-50);
+        line-height: 1.6;
+        max-width: 36ch;
+        margin: 0 auto;
+      }
+
+      /* ── Cards ──────────────────────────────────────── */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 26px;
+        margin-bottom: 14px;
+      }
+
+      .label {
+        font-family: var(--mono);
+        font-size: 10.5px;
+        font-weight: 500;
+        color: var(--fg-50);
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        margin-bottom: 14px;
+        display: block;
+      }
+
+      .input-row {
+        display: flex;
+        gap: 10px;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        background: #000;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--fg);
+        font-family: var(--mono);
+        font-size: 13.5px;
+        padding: 13px 15px;
+        outline: none;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+        min-width: 0;
+      }
+
+      input[type="text"]:focus {
+        border-color: var(--border-strong);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+      }
+
+      input[type="text"]::placeholder {
+        color: var(--fg-30);
+      }
+
+      button {
+        background: var(--fg);
+        color: #000;
+        border: none;
+        border-radius: var(--radius);
+        font-family: var(--sans);
+        font-weight: 600;
+        font-size: 14px;
+        padding: 0 22px;
+        cursor: pointer;
+        transition:
+          background 0.2s,
+          transform 0.1s;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      button:hover {
+        background: #d0d0d0;
+      }
+      button:active {
+        transform: scale(0.97);
+      }
+
+      .error {
+        font-size: 13px;
+        color: var(--error);
+        margin-top: 12px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        min-height: 16px;
+      }
+      .error.show {
+        opacity: 1;
+      }
+
+      /* ── Output ─────────────────────────────────────── */
+      .output-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px;
+        display: none;
+        animation: revealUp 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        margin-bottom: 14px;
+      }
+
+      .output-card.show {
+        display: block;
+      }
+
+      .link-row {
+        display: flex;
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .link-box {
+        flex: 1;
+        background: #000;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px 15px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--fg-70);
+        word-break: break-all;
+        line-height: 1.5;
+        min-width: 0;
+        cursor: text;
+        user-select: all;
+      }
+
+      .copy-btn {
+        background: transparent;
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius);
+        color: var(--fg);
+        font-family: var(--mono);
+        font-weight: 500;
+        font-size: 11.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 0 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+      .copy-btn:hover {
+        background: var(--accent);
+      }
+      .copy-btn.copied {
+        border-color: var(--success);
+        color: var(--success);
+      }
+
+      /* ── Footnote ───────────────────────────────────── */
+      .footnote {
+        font-size: 12.5px;
+        color: var(--fg-30);
+        line-height: 1.6;
+        padding: 4px 8px 0;
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+      }
+
+      .footnote svg {
+        flex-shrink: 0;
+        margin-top: 3px;
+      }
+
+      .footnote b {
+        color: var(--fg-50);
+        font-weight: 600;
+      }
+
+      /* ── Redirect screen ────────────────────────────── */
+      #redirect-screen {
+        display: none;
+        text-align: center;
+      }
+
+      #redirect-screen.active {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 22px;
+        padding-top: 80px;
+      }
+
+      .redirect-icon {
+        width: 68px;
+        height: 68px;
+        border-radius: var(--radius);
+        background: var(--fg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: pulse 1.3s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.05);
+          opacity: 0.85;
+        }
+      }
+
+      .redirect-title {
+        font-family: var(--sans);
+        font-weight: 800;
+        font-size: 26px;
+        letter-spacing: -0.02em;
+        color: var(--fg);
+      }
+
+      .redirect-sub {
+        font-family: var(--mono);
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--fg-50);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+      }
+
+      .redirect-fallback {
+        margin-top: 8px;
+        font-size: 13px;
+        color: var(--fg-30);
+      }
+
+      .redirect-fallback a {
+        color: var(--fg);
+        text-decoration: none;
+        border-bottom: 1px solid var(--border-strong);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- LOADING SCREEN -->
+    <div id="loader">
+      <div class="loader-mark">Loading</div>
+      <div class="loader-track">
+        <div class="loader-fill" id="loader-fill"></div>
+      </div>
+    </div>
+
+    <!-- MAIN SCREEN -->
+    <div class="page" id="main-screen">
+      <div class="wordmark reveal" style="animation-delay: 0.05s">
+        <span class="dot"></span>LinkOpenInApp
+      </div>
+
+      <div class="hero">
+        <div class="eyebrow reveal" style="animation-delay: 0.1s">
+          Deep-link utility
+        </div>
+        <h1 class="reveal" style="animation-delay: 0.15s">
+          Skip the app picker.
+        </h1>
+        <p class="hero-sub reveal" style="animation-delay: 0.2s">
+          Paste a YouTube link, get one back that jumps straight into the app —
+          no dialog in between.
+        </p>
+      </div>
+
+      <div class="card reveal" style="animation-delay: 0.25s">
+        <span class="label">Paste YouTube link</span>
+        <div class="input-row">
+          <input
+            type="text"
+            id="url-input"
+            placeholder="https://youtube.com/watch?v=..."
+          />
+          <button onclick="generate()">Generate</button>
+        </div>
+        <div class="error" id="error-msg">
+          Couldn't find a valid YouTube video ID in that link.
+        </div>
+      </div>
+
+      <div class="output-card" id="output-card">
+        <span class="label">Your instant link</span>
+        <div class="link-row">
+          <div class="link-box" id="generated-link"></div>
+          <button class="copy-btn" id="copy-btn" onclick="copyLink()">
+            Copy
+          </button>
+        </div>
+      </div>
+
+      <p class="footnote reveal" style="animation-delay: 0.3s">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="rgba(242,242,242,0.3)"
+          stroke-width="2"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 16v-4M12 8h.01" />
+        </svg>
+        <span
+          ><b>Works on iOS and Android.</b> Opens the YouTube app directly when
+          it's installed, and falls back to the browser when it isn't.</span
+        >
+      </p>
+    </div>
+
+    <!-- REDIRECT SCREEN -->
+    <div class="page" id="redirect-screen">
+      <div class="redirect-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="black">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </div>
+      <div class="redirect-title">Opening YouTube</div>
+      <div class="redirect-sub">Launching app instantly</div>
+      <div class="redirect-fallback" id="fallback-msg"></div>
+    </div>
+
+    <script>
+      // ── LOADER ────────────────────────────────────────────────────────
+      window.addEventListener("load", () => {
+        const fill = document.getElementById("loader-fill");
+        requestAnimationFrame(() => {
+          fill.style.width = "100%";
+        });
+        setTimeout(() => {
+          document.getElementById("loader").classList.add("done");
+        }, 550);
+      });
+
+      // ── EXTRACT VIDEO ID ──────────────────────────────────────────────
+      function extractVideoId(url) {
+        // Reject music.youtube.com — different app, different URI scheme
+        if (/music\.youtube\.com/.test(url)) return null;
+        const patterns = [
+          /(?:(?:www\.|m\.)?youtube\.com\/watch\?(?:.*&)?v=)([a-zA-Z0-9_-]{11})/,
+          /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+          /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+          /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+          /(?:youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+          /(?:youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/, // Live streams
+        ];
+        for (const p of patterns) {
+          const m = url.match(p);
+          if (m) return m[1];
+        }
+        return null;
+      }
+
+      // ── GENERATE LINK ─────────────────────────────────────────────────
+      function generate() {
+        const input = document.getElementById("url-input").value.trim();
+        const errorEl = document.getElementById("error-msg");
+        const outputCard = document.getElementById("output-card");
+        const linkEl = document.getElementById("generated-link");
+
+        const vid = extractVideoId(input);
+
+        if (!vid) {
+          errorEl.classList.add("show");
+          outputCard.classList.remove("show");
+          return;
+        }
+
+        errorEl.classList.remove("show");
+
+        // Build the redirect URL pointing to this same page with ?v= param
+        const base = window.location.href.split("?")[0];
+        const redirectUrl = `${base}?v=${vid}`;
+
+        linkEl.textContent = redirectUrl;
+        outputCard.classList.add("show");
+
+        // Reset copy btn
+        const copyBtn = document.getElementById("copy-btn");
+        copyBtn.textContent = "Copy";
+        copyBtn.classList.remove("copied");
+      }
+
+      // ── COPY ──────────────────────────────────────────────────────────
+      function copyLink() {
+        const text = document.getElementById("generated-link").textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          const btn = document.getElementById("copy-btn");
+          btn.textContent = "Copied";
+          btn.classList.add("copied");
+          setTimeout(() => {
+            btn.textContent = "Copy";
+            btn.classList.remove("copied");
+          }, 2000);
+        });
+      }
+
+      // ── ENTER KEY ─────────────────────────────────────────────────────
+      document.getElementById("url-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") generate();
+      });
+
+      // ── REDIRECT MODE ─────────────────────────────────────────────────
+      function doRedirect(vid) {
+        document.getElementById("main-screen").style.display = "none";
+        document.getElementById("redirect-screen").classList.add("active");
+
+        const ytUrl = `https://www.youtube.com/watch?v=${vid}`;
+        const fallback = document.getElementById("fallback-msg");
+        fallback.innerHTML = `Not opening? <a href="${ytUrl}" target="_blank">Tap here</a>`;
+
+        const ua = navigator.userAgent;
+
+        // iOS — single youtube:// URI scheme, cancel fallback if app opens
+        if (/iPhone|iPad|iPod/i.test(ua)) {
+          const iosScheme = `youtube://www.youtube.com/watch?v=${vid}`;
+
+          // Fire the scheme once
+          window.location.href = iosScheme;
+
+          // Fallback timer — cancelled if page hides (app opened successfully)
+          let fallbackTimer = setTimeout(() => {
+            window.location.href = ytUrl;
+          }, 2500);
+
+          // If the app opens, the page becomes hidden — cancel the fallback
+          const cancelFallback = () => {
+            clearTimeout(fallbackTimer);
+            document.removeEventListener("visibilitychange", cancelFallback);
+            window.removeEventListener("pagehide", cancelFallback);
+          };
+          document.addEventListener("visibilitychange", () => {
+            if (document.hidden) cancelFallback();
+          });
+          window.addEventListener("pagehide", cancelFallback);
+
+          // Android — intent URI (best for in-app browsers incl Instagram)
+        } else if (/Android/i.test(ua)) {
+          const intentUri = `intent://www.youtube.com/watch?v=${vid}#Intent;package=com.google.android.youtube;scheme=https;S.browser_fallback_url=${encodeURIComponent(ytUrl)};end`;
+          window.location.href = intentUri;
+          // Android intent handles its own fallback via S.browser_fallback_url — no timer needed
+
+          // Desktop / other — just open YouTube
+        } else {
+          window.location.href = ytUrl;
+        }
+      }
+
+      // ── INIT ──────────────────────────────────────────────────────────
+      (function init() {
+        const params = new URLSearchParams(window.location.search);
+        const vid = params.get("v");
+        if (vid && /^[a-zA-Z0-9_-]{11}$/.test(vid)) {
+          doRedirect(vid);
+        }
+      })();
+    </script>
+  </body>
+</html>
