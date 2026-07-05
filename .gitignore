@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment Variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# Node
+node_modules/
+
+# Build
+dist/
+build/
+.next/
+out/
+
+# Cache
+.cache/
+coverage/
+
+# Misc
+*.tmp
+*.swp
